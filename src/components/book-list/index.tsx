@@ -1,4 +1,6 @@
 import { Fragment, useCallback, useEffect } from 'react';
+import { debounce } from 'lodash';
+import { useRouter } from 'next/router';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import clsx from 'clsx';
 import { HeartIcon } from '@heroicons/react/20/solid';
@@ -11,7 +13,6 @@ import {
 } from '@/jotai/books';
 import { MAX_PAGE_SIZE } from '@/constants';
 import { currentPageAtom, totalPagesAtom } from '@/jotai/page';
-import { debounce } from 'lodash';
 
 const createBooksUrl = (
   page: number,
@@ -28,6 +29,8 @@ const createBooksUrl = (
 };
 
 export const BookList = () => {
+  const router = useRouter();
+
   const currentPage = useAtomValue(currentPageAtom);
   const searchQuery = useAtomValue(searchQueryAtom);
   const setTotalPages = useSetAtom(totalPagesAtom);
@@ -47,7 +50,7 @@ export const BookList = () => {
         setIsLoading(true);
 
         const url = createBooksUrl(page, query, show, myFavorites);
-        console.log(url);
+
         try {
           const response = await fetch(url);
           const data = await response.json();
@@ -90,13 +93,18 @@ export const BookList = () => {
     }
   }, []);
 
+  const handleBookClick = (bookId: number) => {
+    router.push(`/book/${bookId}`);
+  };
+
   return !isLoading ? (
     <ul role="list" className="divide-y divide-white/25">
       {books.length > 0 ? (
         books.map(({ id, title, authors, download_count }) => (
           <li
             key={id}
-            className="relative flex items-center space-x-4 px-4 py-4 sm:px-6 lg:px-8"
+            className="relative flex items-center space-x-4 px-4 py-4 sm:px-6 lg:px-8 cursor-pointer"
+            onClick={() => handleBookClick(id)}
           >
             <div className="min-w-0 flex-auto">
               <div className="flex items-center gap-x-3">
@@ -120,13 +128,16 @@ export const BookList = () => {
               </div>
             </div>
             <button
-              onClick={() => toggleFavorite(id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(id);
+              }}
               type="button"
               className={clsx(
-                'ml-4 flex items-center justify-center rounded-md px-1 py-1 text-gray-400 hover:bg-gray-400 hover:text-white',
+                'ml-4 flex items-center justify-center rounded-md px-1 py-1 text-gray-400 hover:bg-gray-400',
                 favorites.find((idSaved: number) => idSaved === id)
                   ? 'text-red-500'
-                  : ''
+                  : 'hover:text-white'
               )}
             >
               <HeartIcon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
